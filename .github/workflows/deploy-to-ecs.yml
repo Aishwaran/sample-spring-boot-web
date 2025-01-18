@@ -3,7 +3,7 @@ name: Deploy to ECS
 on:
   push:
     branches:
-      - master
+      - main  # Trigger the workflow on push to the main branch
 
 jobs:
   deploy:
@@ -14,39 +14,40 @@ jobs:
       id-token: write
 
     steps:
-      # Step 1: Checkout the code with full depth
+      # Step 1: Checkout the code
       - name: Checkout code
         uses: actions/checkout@v3
         with:
-          fetch-depth: 0
+          fetch-depth: 0  # Fetch the full repository to avoid missing files
 
-      # Step 2: Log in to AWS ECR
+      # Step 2: Set up AWS credentials
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v3
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ap-south-1 # Update with your desired region
+          aws-region: ap-south-1 # Use your AWS region
 
+      # Step 3: Log in to Amazon ECR
       - name: Log in to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
 
-      # Step 3: Build and push the Docker image to ECR
+      # Step 4: Build, tag, and push Docker image to ECR
       - name: Build, tag, and push Docker image
         env:
-          IMAGE_TAG: ${{ github.sha }}
+          IMAGE_TAG: ${{ github.sha }}  # Tag the image with the commit SHA
           REPOSITORY_URI: ${{ secrets.ECR_REPOSITORY_URI }}
         run: |
           echo "Building Docker image with tag: $IMAGE_TAG"
-          docker build -t $REPOSITORY_URI:$IMAGE_TAG -f student-management-system/Dockerfile student-management-system
+          docker build -t $REPOSITORY_URI:$IMAGE_TAG .
           docker push $REPOSITORY_URI:$IMAGE_TAG
 
-      # # Step 4: Deploy to ECS
+      # Step 5: Deploy to ECS
       # - name: Deploy to ECS
       #   uses: aws-actions/amazon-ecs-deploy-task-definition@v1
       #   with:
-      #     task-definition: ecs-task-definition.json
+      #     task-definition: ecs-task-definition.json  # Path to your ECS task definition file
       #     service: ${{ secrets.ECS_SERVICE_NAME }}
       #     cluster: ${{ secrets.ECS_CLUSTER_NAME }}
       #     image: ${{ secrets.ECR_REPOSITORY_URI }}:${{ github.sha }}
